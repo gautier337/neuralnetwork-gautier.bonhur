@@ -1,0 +1,15 @@
+Un perceptron est un modèle mathématique simple utilisé dans le domaine de l'intelligence artificielle, plus précisément dans les réseaux de neurones artificiels. Voici une explication simplifiée :
+
+    Inspiration Biologique : Le perceptron s'inspire du neurone, l'unité de base du cerveau humain. Tout comme un neurone reçoit des signaux de plusieurs autres neurones et envoie un signal unique en sortie, le perceptron reçoit plusieurs entrées et produit une sortie unique.
+
+    Entrées et Poids : Imaginez le perceptron comme une sorte de filtre. Il reçoit plusieurs signaux en entrée, chacun associé à un "poids". Ces poids sont des valeurs numériques qui représentent l'importance ou la force de chaque entrée.
+
+    Somme Pondérée : Le perceptron calcule ensuite une somme pondérée de ces entrées, c'est-à-dire qu'il multiplie chaque entrée par son poids correspondant et additionne le tout.
+
+    Fonction d'Activation : Après avoir calculé cette somme pondérée, le perceptron applique une fonction d'activation. Cette fonction détermine si la sortie du perceptron sera active ou non. Une fonction d'activation courante est la fonction de seuil, où si la somme pondérée dépasse un certain seuil, la sortie est active (par exemple, 1), sinon, elle est inactive (0).
+
+    Apprentissage : L'apprentissage dans un perceptron consiste à ajuster les poids en fonction des erreurs commises. Si la sortie n'est pas celle attendue, les poids sont modifiés pour améliorer la performance du modèle.
+
+    Utilisation : Les perceptrons sont utilisés pour des tâches de classification simples. Par exemple, ils peuvent aider à décider si un email est un spam ou non, en fonction de caractéristiques comme la fréquence de certains mots.
+
+En résumé, un perceptron est un modèle simple qui prend des entrées, les pondère, les additionne, puis décide d'une sortie en fonction de cette somme pondérée. Il est capable d'apprendre et de s'adapter en ajustant ses poids.
