@@ -1,5 +1,4 @@
 MyTorch - B-CNA-500
-Aperçu
 
 MyTorch est un projet dans le cadre du cours B5 - Computer Numerical Analysis (B-CNA-500). Ce projet vise à développer un réseau de neurones pour analyser des parties d'échecs. Le réseau prend en entrée un échiquier et prédit l'état de la partie : victoire, échec, pat, ou partie en cours.
 Fonctionnalités
@@ -33,8 +32,7 @@ Le projet MyTorch est entièrement contenu dans un seul fichier script Python, m
 
 Documentation Technique
 
-    Architecture du Réseau : Justification des choix architecturaux (nombre de couches, nombre de neurones par couche, fonction d'activation, etc.).
-    Méthode d'Optimisation : Explications sur les techniques d'optimisation utilisées pour l'apprentissage.
+    Chaque fonction est documenté dans le code.
 
 Exemples d'Utilisation
 Créer un Nouveau Réseau
