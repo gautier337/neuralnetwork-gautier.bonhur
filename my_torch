@@ -34,7 +34,7 @@ class NeuralNetwork:
         self.A2 = softmax(self.Z2)
         return self.A2
 
-    def backward(self, X, Y, output):
+    def backward(self, X, Y, output, learning_rate):
         """
         Effectue une rétropropagation pour mettre à jour les poids et les biais.
 
@@ -42,6 +42,7 @@ class NeuralNetwork:
             X (ndarray): Les données d'entrée.
             Y (ndarray): Les labels réels.
             output (ndarray): La sortie prédite du réseau de neurones.
+            learning_rate (float): Taux d'apprentissage pour la mise à jour des poids.
         """
         m = Y.shape[0]
         dZ2 = output - Y
@@ -297,7 +298,7 @@ if __name__ == "__main__":
                 Y_batch = Y_train_shuffled[i:i + batch_size]
                 output = nn.forward(X_batch)
                 loss = compute_loss(Y_batch, output)
-                nn.backward(X_batch, Y_batch, output)
+                nn.backward(X_batch, Y_batch, output, learning_rate)
 
             print(f"Epoch {epoch}, Loss: {loss:.4f}")
 
