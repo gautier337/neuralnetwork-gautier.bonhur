@@ -1,0 +1,320 @@
+#!/usr/bin/env python3
+
+import argparse
+import numpy as np
+
+class NeuralNetwork:
+    def __init__(self, input_size, hidden_size, output_size):
+        """
+        Initialise un réseau de neurones avec des poids et des biais aléatoires.
+
+        Args:
+            input_size (int): Taille de la couche d'entrée.
+            hidden_size (int): Taille de la couche cachée.
+            output_size (int): Taille de la couche de sortie.
+        """
+        self.weights1 = np.random.randn(input_size, hidden_size) * 0.01
+        self.weights2 = np.random.randn(hidden_size, output_size) * 0.01
+        self.bias1 = np.zeros((1, hidden_size))
+        self.bias2 = np.zeros((1, output_size))
+
+    def forward(self, X):
+        """
+        Effectue une passe avant dans le réseau de neurones.
+
+        Args:
+            X (ndarray): Les données d'entrée.
+
+        Returns:
+            ndarray: La sortie du réseau de neurones.
+        """
+        self.Z1 = np.dot(X, self.weights1) + self.bias1
+        self.A1 = relu(self.Z1)
+        self.Z2 = np.dot(self.A1, self.weights2) + self.bias2
+        self.A2 = softmax(self.Z2)
+        return self.A2
+
+    def backward(self, X, Y, output):
+        """
+        Effectue une rétropropagation pour mettre à jour les poids et les biais.
+
+        Args:
+            X (ndarray): Les données d'entrée.
+            Y (ndarray): Les labels réels.
+            output (ndarray): La sortie prédite du réseau de neurones.
+        """
+        m = Y.shape[0]
+        dZ2 = output - Y
+        dW2 = (1 / m) * np.dot(self.A1.T, dZ2)
+        db2 = (1 / m) * np.sum(dZ2, axis=0, keepdims=True)
+        dZ1 = np.dot(dZ2, self.weights2.T) * relu_derivative(self.Z1)
+        dW1 = (1 / m) * np.dot(X.T, dZ1)
+        db1 = (1 / m) * np.sum(dZ1, axis=0, keepdims=True)
+
+        self.weights1 -= learning_rate * dW1
+        self.weights2 -= learning_rate * dW2
+        self.bias1 -= learning_rate * db1
+        self.bias2 -= learning_rate * db2
+
+    def save(self, filename):
+        """
+        Enregistre les poids et les biais du réseau dans un fichier.
+
+        Args:
+            filename (str): Le nom du fichier dans lequel enregistrer.
+        """
+        with open(filename, 'w') as file:
+            file.write("weights1\n")
+            np.savetxt(file, self.weights1)
+            file.write("bias1\n")
+            np.savetxt(file, self.bias1)
+            file.write("weights2\n")
+            np.savetxt(file, self.weights2)
+            file.write("bias2\n")
+            np.savetxt(file, self.bias2)
+
+    @classmethod
+    def load(cls, input_size, hidden_size, output_size, filename):
+        """
+        Charge un réseau de neurones à partir d'un fichier.
+
+        Args:
+            input_size (int): Taille de la couche d'entrée.
+            hidden_size (int): Taille de la couche cachée.
+            output_size (int): Taille de la couche de sortie.
+            filename (str): Le nom du fichier à charger.
+
+        Returns:
+            NeuralNetwork: Le réseau de neurones chargé.
+        """
+        nn = cls(input_size, hidden_size, output_size)
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+
+        def extract_weights(start_line, num_rows, num_cols):
+            weights = []
+            for line in lines[start_line + 1:start_line + 1 + num_rows]:
+                row_values = list(map(float, line.strip().split()))
+                weights.extend(row_values)
+            
+            if len(weights) != num_rows * num_cols:
+                raise ValueError(f"Invalid number of values in weights: expected {num_rows * num_cols}, got {len(weights)}")
+            return np.array(weights).reshape(num_rows, num_cols)
+
+        for i, line in enumerate(lines):
+            if line.strip() == 'weights1':
+                nn.weights1 = extract_weights(i, input_size, hidden_size)
+            elif line.strip() == 'bias1':
+                nn.bias1 = extract_weights(i, 1, hidden_size)
+            elif line.strip() == 'weights2':
+                nn.weights2 = extract_weights(i, hidden_size, output_size)
+            elif line.strip() == 'bias2':
+                nn.bias2 = extract_weights(i, 1, output_size)
+
+        return nn
+
+def relu(Z):
+    """
+    Applique la fonction d'activation ReLU.
+
+    Args:
+        Z (ndarray): Le vecteur d'entrée.
+
+    Returns:
+        ndarray: Le vecteur après application de ReLU.
+    """
+    return np.maximum(0, Z)
+
+def relu_derivative(Z):
+    """
+    Calcule la dérivée de la fonction ReLU.
+
+    Args:
+        Z (ndarray): Le vecteur d'entrée.
+
+    Returns:
+        ndarray: La dérivée de ReLU.
+    """
+    return Z > 0
+
+def softmax(Z):
+    """
+    Applique la fonction d'activation softmax.
+
+    Args:
+        Z (ndarray): Le vecteur d'entrée.
+
+    Returns:
+        ndarray: Le vecteur après application de softmax.
+    """
+    expZ = np.exp(Z - np.max(Z, axis=1, keepdims=True))
+    return expZ / np.sum(expZ, axis=1, keepdims=True)
+
+def compute_loss(Y, Y_hat):
+    """
+    Calcule la perte de cross-entropy.
+
+    Args:
+        Y (ndarray): Les labels réels.
+        Y_hat (ndarray): Les labels prédits.
+
+    Returns:
+        float: La valeur de la perte.
+    """
+    m = Y.shape[0]
+    loss = -np.sum(Y * np.log(Y_hat + 1e-15)) / m
+    return loss
+
+def parse_fen(fen):
+    """
+    Convertit une notation FEN en une représentation de plateau d'échecs utilisable par le réseau.
+
+    Args:
+        fen (str): La notation FEN de la position d'échecs.
+
+    Returns:
+        tuple: Un tuple contenant le plateau et le tour du joueur.
+    """
+    piece_to_num = {'p': 1, 'r': 2, 'n': 3, 'b': 4, 'q': 5, 'k': 6,
+                    'P': -1, 'R': -2, 'N': -3, 'B': -4, 'Q': -5, 'K': -6, '.': 0}
+    board = []
+    rows = fen.split(' ')[0].split('/')
+    for row in rows:
+        board_row = []
+        for char in row:
+            if char.isdigit():
+                board_row.extend([0] * int(char))
+            elif char in piece_to_num:
+                board_row.append(piece_to_num[char])
+        board.extend(board_row)
+
+    player_turn = 1 if fen.split()[1] == 'w' else -1
+    return board, player_turn
+
+def convert_res_to_label(res, checkmate):
+    """
+    Convertit le résultat d'une partie d'échecs en un label utilisable par le réseau.
+
+    Args:
+        res (str): Le résultat de la partie.
+        checkmate (bool): Indique si la partie se termine par un échec et mat.
+
+    Returns:
+        list: Un tableau représentant le label du résultat.
+    """
+    if checkmate:
+        return [0, 0, 0, 1]  # Échec et mat
+    elif res == '1-0':
+        return [1, 0, 0, 0]  # Victoire des Blancs
+    elif res == '0-1':
+        return [0, 1, 0, 0]  # Victoire des Noirs
+    elif res == '1/2-1/2':
+        return [0, 0, 1, 0]  # Match nul
+    else:
+        return [0, 0, 0, 0]  # Jeu en cours ou état inconnu
+
+def load_data(file_path):
+    """
+    Charge les données d'échecs à partir d'un fichier.
+
+    Args:
+        file_path (str): Le chemin du fichier contenant les données d'échecs.
+
+    Returns:
+        tuple: Un tuple contenant les données et les labels.
+    """
+    data, labels = [], []
+    with open(file_path, 'r') as file:
+        while True:
+            line = file.readline()
+            if not line:
+                break
+            if line.startswith('RES:'):
+                res = line.split(':')[1].strip()
+                checkmate_line = file.readline().strip()
+                checkmate = checkmate_line.split(':')[1].strip() == 'True'
+                fen_line = file.readline().strip()
+                if fen_line.startswith('FEN:'):
+                    fen = fen_line.split('FEN:')[1].strip()
+                    board, player_turn = parse_fen(fen)
+                    data.append(board + [player_turn])
+                    label = convert_res_to_label(res, checkmate)
+                    labels.append(label)
+
+    return np.array(data), np.array(labels)
+
+def parse_arguments():
+    """
+    Analyse les arguments de la ligne de commande.
+
+    Returns:
+        Namespace: Un objet Namespace contenant les arguments analysés.
+    """
+    parser = argparse.ArgumentParser(description='Chess Analysis Neural Network Tool')
+    parser.add_argument('--new', nargs=3, type=int, help='Create a new neural network: input_size hidden_size output_size')
+    parser.add_argument('--batch', type=int, help='Batch size for training')
+    parser.add_argument('--load', type=str, help='Load an existing neural network from a file')
+    parser.add_argument('--train', type=str, help='Train the neural network: data_file')
+    parser.add_argument('--predict', type=str, help='Predict using the neural network: data_file')
+    parser.add_argument('--save', type=str, help='Save the neural network to a file')
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_arguments()
+
+    nn = None
+    learning_rate = 0.01
+    n_iterations = 1000
+
+    # Définir une valeur par défaut pour batch_size
+    batch_size = args.batch if args.batch else 64
+
+    # Gestion de l'argument --load
+    if args.load:
+        input_size, hidden_size, output_size = [65, 4, 4]  # Ajustez ces valeurs selon votre modèle
+        nn = NeuralNetwork.load(input_size, hidden_size, output_size, args.load)
+
+    # Gestion de l'argument --new
+    if args.new and not nn:
+        input_size, hidden_size, output_size = args.new
+        nn = NeuralNetwork(input_size, hidden_size, output_size)
+
+    # Gestion de l'argument --train
+    if args.train and nn:
+        data_file = args.train
+        X, Y = load_data(data_file)
+        train_size = int(0.8 * X.shape[0])
+        X_train, X_test = X[:train_size], X[train_size:]
+        Y_train, Y_test = Y[:train_size], Y[train_size:]
+
+        for epoch in range(n_iterations):
+            permutation = np.random.permutation(X_train.shape[0])
+            X_train_shuffled = X_train[permutation]
+            Y_train_shuffled = Y_train[permutation]
+
+            for i in range(0, X_train.shape[0], batch_size):
+                X_batch = X_train_shuffled[i:i + batch_size]
+                Y_batch = Y_train_shuffled[i:i + batch_size]
+                output = nn.forward(X_batch)
+                loss = compute_loss(Y_batch, output)
+                nn.backward(X_batch, Y_batch, output)
+
+            print(f"Epoch {epoch}, Loss: {loss:.4f}")
+
+        predictions = nn.forward(X_test)
+        accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(Y_test, axis=1))
+        print(f"Accuracy: {accuracy:.2f}")
+
+    # Gestion de l'argument --save
+    if args.save and nn:
+        nn.save(args.save)
+
+    # Gestion de l'argument --predict
+    if args.predict and nn:
+        data_file = args.predict
+        X, _ = load_data(data_file)
+        predictions = nn.forward(X)
+        predicted_labels = np.argmax(predictions, axis=1)
+
+        for i, prediction in enumerate(predicted_labels):
+            print(f"Board {i}: Prediction - {prediction}")
