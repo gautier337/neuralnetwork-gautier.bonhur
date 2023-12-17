@@ -298,59 +298,52 @@ def parse_arguments():
     parser.add_argument('--save', type=str, help='Save the neural network to a file')
     return parser.parse_args()
 
-if __name__ == "__main__":
-    args = parse_arguments()
-
-    nn = None
-    learning_rate = 0.01
-    n_iterations = 1000
-
-    # Définir une valeur par défaut pour batch_size
-    batch_size = args.batch if args.batch else 64
-
-    # Gestion de l'argument --load
+def initialize_network(args):
+    """Initialise le réseau de neurones en fonction des arguments."""
     if args.load:
-        input_size, hidden_size, output_size = [65, 4, 4]  # Ajustez ces valeurs selon votre modèle
-        nn = NeuralNetwork.load(input_size, hidden_size, output_size, args.load)
-
-    # Gestion de l'argument --new
-    if args.new and not nn:
+        input_size, hidden_size, output_size = [65, 4, 4]  # Ajustez ces valeurs
+        return NeuralNetwork.load(input_size, hidden_size, output_size, args.load)
+    elif args.new:
         input_size, hidden_size, output_size = args.new
-        nn = NeuralNetwork(input_size, hidden_size, output_size)
+        return NeuralNetwork(input_size, hidden_size, output_size)
+    else:
+        return None
 
-    # Gestion de l'argument --train
-    if args.train and nn:
-        data_file = args.train
-        X, Y = load_data(data_file)
-        train_size = int(0.8 * X.shape[0])
-        X_train, X_test = X[:train_size], X[train_size:]
-        Y_train, Y_test = Y[:train_size], Y[train_size:]
+def train_network(nn, args, n_iterations, batch_size):
+    """Entraîne le réseau de neurones."""
+    data_file = args.train
+    X, Y = load_data(data_file)
+    train_size = int(0.8 * X.shape[0])
+    X_train, X_test = X[:train_size], X[train_size:]
+    Y_train, Y_test = Y[:train_size], Y[train_size:]
 
-        for epoch in range(n_iterations):
-            permutation = np.random.permutation(X_train.shape[0])
-            X_train_shuffled = X_train[permutation]
-            Y_train_shuffled = Y_train[permutation]
+    for epoch in range(n_iterations):
+        permutation = np.random.permutation(X_train.shape[0])
+        X_train_shuffled = X_train[permutation]
+        Y_train_shuffled = Y_train[permutation]
 
-            for i in range(0, X_train.shape[0], batch_size):
-                X_batch = X_train_shuffled[i:i + batch_size]
-                Y_batch = Y_train_shuffled[i:i + batch_size]
-                output = nn.forward(X_batch)
-                loss = compute_loss(Y_batch, output)
-                nn.backward(X_batch, Y_batch, output, learning_rate)
+        for i in range(0, X_train.shape[0], batch_size):
+            X_batch = X_train_shuffled[i:i + batch_size]
+            Y_batch = Y_train_shuffled[i:i + batch_size]
+            output = nn.forward(X_batch)
+            loss = compute_loss(Y_batch, output)
+            nn.backward(X_batch, Y_batch, output, learning_rate)
 
-            epoch_data = {'Epoch': epoch, 'Loss': f"{loss:.4f}"}
-            print(epoch_data)
+        epoch_data = {'Epoch': epoch, 'Loss': f"{loss:.4f}"}
+        print(epoch_data)
 
-        predictions = nn.forward(X_test)
-        accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(Y_test, axis=1))
-        print(f"Accuracy: {accuracy:.2f}")
+    predictions = nn.forward(X_test)
+    accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(Y_test, axis=1))
+    print(f"Accuracy: {accuracy:.2f}")
 
-    # Gestion de l'argument --save
-    if args.save and nn:
+def save_network(nn, args):
+    """Sauvegarde le réseau de neurones."""
+    if nn:
         nn.save(args.save)
 
-    # Gestion de l'argument --predict
-    if args.predict and nn:
+def predict_with_network(nn, args):
+    """Effectue des prédictions avec le réseau de neurones."""
+    if nn:
         data_file = args.predict
         X, _ = load_data(data_file)
         predictions = nn.forward(X)
@@ -358,3 +351,28 @@ if __name__ == "__main__":
 
         for i, prediction in enumerate(predicted_labels):
             print(f"Board {i}: Prediction - {prediction}")
+
+if __name__ == "__main__":
+    
+    args = parse_arguments()
+    nn = initialize_network(args)
+    learning_rate = 0.01
+    n_iterations = 100
+    batch_size = args.batch or 64
+
+    if args.load:
+        input_size, hidden_size, output_size = [65, 4, 4]
+        nn = NeuralNetwork.load(input_size, hidden_size, output_size, args.load)
+
+    if args.new and not nn:
+        input_size, hidden_size, output_size = args.new
+        nn = NeuralNetwork(input_size, hidden_size, output_size)
+
+    if args.train and nn:
+        train_network(nn, args, n_iterations, batch_size)
+
+    if args.save and nn:
+        save_network(nn, args)
+
+    if args.predict and nn:
+        predict_with_network(nn, args)

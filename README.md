@@ -43,7 +43,7 @@ Créer un Nouveau Réseau
 
 Entraîner un Réseau
 
-./my_torch --new 65 4 4 --train datasets/checkmate/10_pieces.txt --save saved_network.txt
+./my_torch --new 65 4 4 --train datasets/boards/10_pieces.txt --save saved_network.txt
 
 Prédiction
 
