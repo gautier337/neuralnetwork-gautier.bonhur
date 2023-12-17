@@ -39,12 +39,12 @@ Documentation Technique
 Exemples d'Utilisation
 Créer un Nouveau Réseau
 
-./my_torch --new 64 100 4
+./my_torch --new 65 4 4
 
 Entraîner un Réseau
 
-./my_torch --new 65 4 4 --train .\datasets\checkmate\lots_pieces.txt --save saved_network.txt
+./my_torch --new 65 4 4 --train datasets/checkmate/10_pieces.txt --save saved_network.txt
 
 Prédiction
 
-./my_torch --load mon_reseau --predict dataset.txt
+./my_torch --load saved_network.txt --predict datasets/boards/10_pieces.txt

@@ -75,43 +75,81 @@ class NeuralNetwork:
             np.savetxt(file, self.bias2)
 
     @classmethod
+    def extract_weights(cls, lines, start_line, num_rows, num_cols):
+        """
+        Extrait les poids d'une section spécifique d'un fichier et les convertit en un tableau numpy.
+
+        Cette fonction est utilisée pour lire les valeurs de poids ou de biais à partir d'un ensemble de lignes de texte,
+        en commençant à une ligne spécifiée et en lisant un nombre défini de lignes et de colonnes.
+
+        Args:
+            lines (list of str): L'ensemble des lignes du fichier à partir duquel extraire les poids.
+            start_line (int): L'indice de la ligne de départ pour l'extraction.
+            num_rows (int): Le nombre de lignes à lire pour les poids.
+            num_cols (int): Le nombre de colonnes par ligne pour les poids.
+
+        Returns:
+            numpy.ndarray: Un tableau numpy contenant les poids extraits.
+        """
+        weights = []
+        for line in lines[start_line + 1:start_line + 1 + num_rows]:
+            row_values = list(map(float, line.strip().split()))
+            weights.extend(row_values)
+        
+        if len(weights) != num_rows * num_cols:
+            raise ValueError(f"Invalid number of values in weights: expected {num_rows * num_cols}, got {len(weights)}")
+        return np.array(weights).reshape(num_rows, num_cols)
+
+    @classmethod
+    def parse_file(cls, nn, lines, input_size, hidden_size, output_size):
+        """
+        Analyse les lignes d'un fichier pour extraire et assigner les poids et les biais au réseau de neurones.
+
+        Cette méthode parcourt les lignes du fichier pour identifier les sections correspondant aux poids et
+        aux biais du réseau de neurones (par exemple, 'weights1', 'bias1', etc.), puis utilise la méthode
+        'extract_weights' pour lire et assigner ces valeurs au réseau.
+
+        Args:
+            nn (NeuralNetwork): L'instance du réseau de neurones à laquelle les poids et biais seront assignés.
+            lines (list of str): Les lignes du fichier à analyser.
+            input_size (int): La taille de la couche d'entrée du réseau.
+            hidden_size (int): La taille de la couche cachée du réseau.
+            output_size (int): La taille de la couche de sortie du réseau.
+        """
+        for i, line in enumerate(lines):
+            if line.strip() == 'weights1':
+                nn.weights1 = cls.extract_weights(lines, i, input_size, hidden_size)
+            elif line.strip() == 'bias1':
+                nn.bias1 = cls.extract_weights(lines, i, 1, hidden_size)
+            elif line.strip() == 'weights2':
+                nn.weights2 = cls.extract_weights(lines, i, hidden_size, output_size)
+            elif line.strip() == 'bias2':
+                nn.bias2 = cls.extract_weights(lines, i, 1, output_size)
+
+    @classmethod
     def load(cls, input_size, hidden_size, output_size, filename):
         """
         Charge un réseau de neurones à partir d'un fichier.
 
+        Cette méthode crée une nouvelle instance de la classe NeuralNetwork avec les tailles spécifiées pour
+        les couches d'entrée, cachée et de sortie, puis lit un fichier pour charger les poids et les biais
+        du réseau. La méthode 'parse_file' est utilisée pour lire le fichier et assigner les valeurs
+        appropriées au réseau.
+
         Args:
-            input_size (int): Taille de la couche d'entrée.
-            hidden_size (int): Taille de la couche cachée.
-            output_size (int): Taille de la couche de sortie.
-            filename (str): Le nom du fichier à charger.
+            input_size (int): Taille de la couche d'entrée du réseau.
+            hidden_size (int): Taille de la couche cachée du réseau.
+            output_size (int): Taille de la couche de sortie du réseau.
+            filename (str): Le nom du fichier à partir duquel charger le réseau.
 
         Returns:
-            NeuralNetwork: Le réseau de neurones chargé.
+            NeuralNetwork: L'instance du réseau de neurones chargée avec les poids et biais.
         """
         nn = cls(input_size, hidden_size, output_size)
         with open(filename, 'r') as file:
             lines = file.readlines()
 
-        def extract_weights(start_line, num_rows, num_cols):
-            weights = []
-            for line in lines[start_line + 1:start_line + 1 + num_rows]:
-                row_values = list(map(float, line.strip().split()))
-                weights.extend(row_values)
-            
-            if len(weights) != num_rows * num_cols:
-                raise ValueError(f"Invalid number of values in weights: expected {num_rows * num_cols}, got {len(weights)}")
-            return np.array(weights).reshape(num_rows, num_cols)
-
-        for i, line in enumerate(lines):
-            if line.strip() == 'weights1':
-                nn.weights1 = extract_weights(i, input_size, hidden_size)
-            elif line.strip() == 'bias1':
-                nn.bias1 = extract_weights(i, 1, hidden_size)
-            elif line.strip() == 'weights2':
-                nn.weights2 = extract_weights(i, hidden_size, output_size)
-            elif line.strip() == 'bias2':
-                nn.bias2 = extract_weights(i, 1, output_size)
-
+        cls.parse_file(nn, lines, input_size, hidden_size, output_size)
         return nn
 
 def relu(Z):
@@ -203,16 +241,16 @@ def convert_res_to_label(res, checkmate):
     Returns:
         list: Un tableau représentant le label du résultat.
     """
+    label_map = {
+        '1-0': [1, 0, 0, 0],       # Victoire des Blancs
+        '0-1': [0, 1, 0, 0],       # Victoire des Noirs
+        '1/2-1/2': [0, 0, 1, 0],   # Match nul
+        'checkmate': [0, 0, 0, 1], # Échec et mat
+        'default': [0, 0, 0, 0]    # Jeu en cours ou état inconnu
+    }
     if checkmate:
-        return [0, 0, 0, 1]  # Échec et mat
-    elif res == '1-0':
-        return [1, 0, 0, 0]  # Victoire des Blancs
-    elif res == '0-1':
-        return [0, 1, 0, 0]  # Victoire des Noirs
-    elif res == '1/2-1/2':
-        return [0, 0, 1, 0]  # Match nul
-    else:
-        return [0, 0, 0, 0]  # Jeu en cours ou état inconnu
+        return label_map['checkmate']
+    return label_map.get(res, label_map['default'])
 
 def load_data(file_path):
     """
@@ -300,7 +338,8 @@ if __name__ == "__main__":
                 loss = compute_loss(Y_batch, output)
                 nn.backward(X_batch, Y_batch, output, learning_rate)
 
-            print(f"Epoch {epoch}, Loss: {loss:.4f}")
+            epoch_data = {'Epoch': epoch, 'Loss': f"{loss:.4f}"}
+            print(epoch_data)
 
         predictions = nn.forward(X_test)
         accuracy = np.mean(np.argmax(predictions, axis=1) == np.argmax(Y_test, axis=1))
